@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Algen WEB</title>
+  <link rel="icon" href="https://tinyurl.com/algenkatico1">
+
+  <style>
+    :root{
+      --bg:#2b2b2b;
+      --fg:#e0e0e0;
+      --panel:#111;
+      --panelBorder:#444;
+      --hudBorder:#3a3a3a;
+      --accent:#00ff00;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      font-family:system-ui, sans-serif;
+      margin:12px;
+      background:var(--bg);
+      color:var(--fg);
+    }
+
+    h3{
+      margin:0 0 10px 0;
+    }
+
+    #layout{
+      display:grid;
+      grid-template-columns: 3fr 1fr;
+      gap:14px;
+      align-items:start;
+    }
+
+    #leftCol{ min-width:320px; }
+    #rightCol{ min-width:260px; position:relative; }
+
+    @media (max-width: 900px){
+      #layout{ grid-template-columns: 1fr; }
+      #leftCol, #rightCol{ min-width:unset; }
+    }
+
+    @media (max-width: 600px){
+      #log{ font-size:12px; height:35vh; }
+      #cmd{ font-size:12px; }
+      #bootIcon{ width:110px; }
+      #bootText{ font-size:12px; }
+      .gsvg{ width:70px; }
+      .gv{ font-size:11px; }
+      .batteryBar{ max-width:180px; height:14px; }
+    }
+
+    #log{
+      height:70vh;
+      overflow:auto;
+      border:1px solid var(--panelBorder);
+      background:var(--panel);
+      color:#00ff00;
+      padding:10px;
+      white-space:pre-wrap;
+    }
+
+    #row{
+      display:flex;
+      gap:8px;
+      margin-top:10px;
+      align-items:stretch;
+    }
+
+    #cmd{
+      flex:1;
+      padding:10px;
+      font-size:14px;
+      background:#444;
+      color:white;
+      border:1px solid #666;
+    }
+
+    button#send,
+    button#dumpBtn{
+      padding:10px 12px;
+      font-size:14px;
+      background:#666;
+      color:white;
+      border:none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      cursor:pointer;
+    }
+
+    button#dumpBtn{
+      width:44px;
+      padding:10px;
+      background:#556;
+    }
+
+    button#dumpBtn svg{
+      width:20px;
+      height:20px;
+      fill:none;
+      stroke:#e0e0e0;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    #hud{
+      position:sticky;
+      top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      align-items:center;
+      width:100%;
+    }
+
+    #bootWrap{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      opacity:0.95;
+      position:relative;
+      width:100%;
+    }
+
+    #turnSvg{
+      position:absolute;
+      top:0;
+      left:50%;
+      transform:translateX(-50%);
+      width:160px;
+      height:160px;
+      pointer-events:none;
+      z-index:1;
+      opacity:0;
+    }
+
+    #turnArc{
+      stroke:#ff8800;
+      stroke-width:6;
+      fill:none;
+      stroke-linecap:round;
+    }
+
+    #turnTarget{
+      stroke:#ffcc00;
+      stroke-width:3;
+      stroke-linecap:round;
+    }
+
+    #bootIcon{
+      display:block;
+      width:160px;
+      height:auto;
+      transform-origin:50% 50%;
+      will-change:transform;
+      position:relative;
+      z-index:2;
+    }
+
+    #bootText{
+      font-size:14px;
+      letter-spacing:0.5px;
+      text-transform:lowercase;
+      user-select:none;
+      min-width:130px;
+      text-align:center;
+      font-variant-numeric:tabular-nums;
+      opacity:0.95;
+    }
+
+    #speedWrap{
+      display:flex;
+      gap:20px;
+      align-items:center;
+      justify-content:center;
+      opacity:0.95;
+    }
+
+    .g{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:2px;
+    }
+
+    .gsvg{
+      width:140px;
+      height:auto;
+    }
+
+    .bg{
+      fill:none;
+      stroke:#223;
+      stroke-width:10;
+      stroke-linecap:round;
+      opacity:0.6;
+    }
+
+    .fg{
+      fill:none;
+      stroke:#4aa3ff;
+      stroke-width:10;
+      stroke-linecap:round;
+    }
+
+    .fg.rev{
+      stroke:#7b66ff;
+    }
+
+    .gl{
+      font-size:12px;
+      opacity:0.8;
+    }
+
+    .gv{
+      font-size:12px;
+      opacity:0.85;
+      font-variant-numeric:tabular-nums;
+    }
+
+    #distWrap{
+      width:100%;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:center;
+      opacity:0.95;
+    }
+
+    .dist{
+      width:100%;
+      max-width:320px;
+      display:grid;
+      grid-template-columns: 28px 1fr 64px;
+      gap:8px;
+      align-items:center;
+    }
+
+    .distLabel{
+      font-size:12px;
+      opacity:0.8;
+      text-align:right;
+    }
+
+    .distBar{
+      height:10px;
+      border:1px solid #2a2a2a;
+      background:#111;
+      border-radius:6px;
+      overflow:hidden;
+    }
+
+    .distFill{
+      height:100%;
+      width:0%;
+      background:#00ff00;
+      transition:width 0.08s linear, opacity 0.12s linear;
+    }
+
+    .distVal{
+      font-size:12px;
+      font-variant-numeric:tabular-nums;
+      opacity:0.85;
+    }
+
+    .dist.invalid .distFill{ opacity:0.15; }
+    .dist.invalid .distVal{ opacity:0.35; }
+
+    #batteryWrap{
+      width:100%;
+      display:flex;
+      justify-content:center;
+      opacity:0.98;
+    }
+
+    .batteryRow{
+      width:100%;
+      max-width:320px;
+      display:grid;
+      grid-template-columns: 34px 1fr 92px;
+      gap:10px;
+      align-items:center;
+    }
+
+    .batteryLabel{
+      font-size:12px;
+      opacity:0.85;
+      text-align:right;
+    }
+
+    .batteryBar{
+      height:18px;
+      border:1px solid #2a2a2a;
+      background:#111;
+      border-radius:8px;
+      overflow:hidden;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    .batteryFill{
+      height:100%;
+      width:0%;
+      background:#ff0000;
+      transition:width 0.12s linear, background 0.18s linear;
+    }
+
+    .batteryVal{
+      font-size:12px;
+      font-variant-numeric:tabular-nums;
+      opacity:0.9;
+      text-align:left;
+      white-space:nowrap;
+    }
+
+    #modeWrap{
+      width:100%;
+      display:flex;
+      justify-content:center;
+    }
+
+    #modeBox{
+      width:100%;
+      max-width:260px;
+      padding:10px 12px;
+      border:1px solid var(--hudBorder);
+      border-radius:10px;
+      background:#161616;
+      color:#f0f0f0;
+      text-align:center;
+      font-size:13px;
+      font-weight:600;
+      letter-spacing:0.4px;
+      box-shadow:0 0 0 1px rgba(255,255,255,0.02) inset;
+    }
+  </style>
+</head>
+
+<body>
+  <h3>ESP32 Logger</h3>
+
+  <div id="layout">
+    <div id="leftCol">
+      <pre id="log"></pre>
+      <div id="row">
+        <input id="cmd" placeholder='Cmds: nav | nav <heading> <speed> <dist> | turn <angle> <speed> <bias> | linear <heading> <speed> <ms> | hs <r> <l> <ms> | rampe <r> <l> <ms> | cancel'>
+        <button id="dumpBtn" title="CSV dump">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 2h8l4 4v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+            <path d="M14 2v6h6"/>
+            <path d="M7 12h10M7 15h10M7 18h7"/>
+          </svg>
+        </button>
+        <button id="send">Send</button>
+      </div>
+    </div>
+
+    <div id="rightCol">
+      <div id="hud">
+        <div id="bootWrap" title="Heading">
+          <svg id="turnSvg" viewBox="0 0 160 160" aria-hidden="true">
+            <circle cx="80" cy="80" r="70" fill="none" stroke="#223" stroke-width="6" opacity="0.35"/>
+            <path id="turnArc" d=""/>
+            <line id="turnTarget" x1="80" y1="10" x2="80" y2="2"/>
+          </svg>
+
+          <img
+            id="bootIcon"
+            src="https://tinyurl.com/allgenkat1"
+            width="160"
+            alt="Heading icon"
+          >
+
+          <div>
+            <div id="bootText">boot</div>
+          </div>
+        </div>
+
+        <div id="speedWrap">
+          <div class="g">
+            <div class="gl">R</div>
+            <svg class="gsvg" viewBox="0 0 120 70">
+              <path class="bg" d="M10 60 A50 50 0 0 1 110 60"/>
+              <path id="arcR" class="fg" d="M10 60 A50 50 0 0 1 110 60"/>
+            </svg>
+            <div id="valR" class="gv">0%</div>
+          </div>
+
+          <div class="g">
+            <div class="gl">L</div>
+            <svg class="gsvg" viewBox="0 0 120 70">
+              <path class="bg" d="M10 60 A50 50 0 0 1 110 60"/>
+              <path id="arcL" class="fg" d="M10 60 A50 50 0 0 1 110 60"/>
+            </svg>
+            <div id="valL" class="gv">0%</div>
+          </div>
+        </div>
+
+        <div id="distWrap">
+          <div class="dist" id="distRow1">
+            <div class="distLabel">D1</div>
+            <div class="distBar"><div id="distFill1" class="distFill"></div></div>
+            <div id="distVal1" class="distVal">-- cm</div>
+          </div>
+
+          <div class="dist" id="distRow2">
+            <div class="distLabel">D2</div>
+            <div class="distBar"><div id="distFill2" class="distFill"></div></div>
+            <div id="distVal2" class="distVal">-- cm</div>
+          </div>
+        </div>
+
+        <div id="batteryWrap">
+          <div class="batteryRow">
+            <div class="batteryLabel">BAT</div>
+            <div class="batteryBar">
+              <div id="batteryFill" class="batteryFill"></div>
+            </div>
+            <div id="batteryVal" class="batteryVal">--% / --.--V</div>
+          </div>
+        </div>
+
+        <div id="modeWrap">
+          <div id="modeBox">MODE: IDLE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       Config
+    ========================================================= */
+    const ESP_IP = "10.85.31.138";
+
+    const DIST_MIN_CM = 25;
+    const DIST_MAX_CM = 200;
+
+    const REC_SECONDS = 30;
+    const REC_HZ = 20;
+    const REC_MAX = REC_SECONDS * REC_HZ;
+
+    /* =========================================================
+       Battery interpolation points
+    ========================================================= */
+    const BATTERY_POINTS = [
+      { v: 2.57, p: 100 },
+      { v: 2.39, p: 60 },
+      { v: 2.27, p: 25 },
+      { v: 2.14, p: 0 }
+    ];
+
+    /* =========================================================
+       DOM
+    ========================================================= */
+    const logEl = document.getElementById('log');
+    const cmdEl = document.getElementById('cmd');
+    const sendBtn = document.getElementById('send');
+    const dumpBtn = document.getElementById('dumpBtn');
+
+    const bootIcon = document.getElementById('bootIcon');
+    const bootText = document.getElementById('bootText');
+
+    const turnSvg = document.getElementById('turnSvg');
+    const turnArcEl = document.getElementById('turnArc');
+    const turnTgtEl = document.getElementById('turnTarget');
+
+    const arcR = document.getElementById('arcR');
+    const arcL = document.getElementById('arcL');
+    const valR = document.getElementById('valR');
+    const valL = document.getElementById('valL');
+
+    const distRow1 = document.getElementById('distRow1');
+    const distRow2 = document.getElementById('distRow2');
+    const distFill1 = document.getElementById('distFill1');
+    const distFill2 = document.getElementById('distFill2');
+    const distVal1 = document.getElementById('distVal1');
+    const distVal2 = document.getElementById('distVal2');
+
+    const batteryFill = document.getElementById('batteryFill');
+    const batteryVal = document.getElementById('batteryVal');
+
+    const modeBox = document.getElementById('modeBox');
+
+    /* =========================================================
+       State
+    ========================================================= */
+    let ws = null;
+    let lastCmd = "";
+
+    let targetAngle = 0;
+    let currentAngle = 0;
+    const SMOOTHING = 0.12;
+
+    let msgCount = 0;
+    let lastStat = performance.now();
+
+    let batteryPct = 0;
+    let batteryVolt = NaN;
+
+    /* =========================================================
+       Helpers
+    ========================================================= */
+    function add(s){
+      s = String(s).replace(/\r/g, "");
+      logEl.textContent += s + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function normalize(a){
+      return (a % 360 + 360) % 360;
+    }
+
+    function shortestDiff(a, b){
+      let d = b - a;
+      if (d > 180) d -= 360;
+      if (d < -180) d += 360;
+      return d;
+    }
+
+    function polar(cx, cy, r, deg){
+      const a = (deg - 90) * Math.PI / 180;
+      return {
+        x: cx + r * Math.cos(a),
+        y: cy + r * Math.sin(a)
+      };
+    }
+
+    function clamp(v, lo, hi){
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    function lerp(a, b, t){
+      return a + (b - a) * t;
+    }
+
+    function rgb(r, g, b){
+      return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+    }
+
+    function modeToText(mode){
+      switch (mode){
+        case 0: return "IDLE";
+        case 1: return "MANUAL";
+        case 2: return "HS";
+        case 3: return "RAMPE";
+        case 4: return "TURN";
+        case 5: return "LINEAR";
+        case 6: return "NAV STRAIGHT";
+        case 7: return "NAV TURN";
+        case 8: return "NAV BLOCKED";
+        default: return "UNKNOWN";
+      }
+    }
+
+    /* =========================================================
+       CSV: Zahl mit Komma als Dezimaltrennzeichen (AT/DE Excel)
+    ========================================================= */
+    function csvNum(v, decimals = 2){
+      if (!isFinite(v)) return "";
+      return v.toFixed(decimals).replace(".", ",");
+    }
+
+    /* =========================================================
+       Heading / Turn Arc
+    ========================================================= */
+    function setTurnArc(currentDeg, targetDeg){
+      if (!turnArcEl || !turnTgtEl || !turnSvg) return;
+
+      if (!isFinite(targetDeg) || targetDeg < 0 || !isFinite(currentDeg)){
+        turnSvg.style.opacity = "0";
+        turnArcEl.setAttribute("d", "");
+        return;
+      }
+
+      const a1 = normalize(currentDeg);
+      const a2 = normalize(targetDeg);
+
+      const d = shortestDiff(a1, a2);
+      const end = a1 + d;
+
+      const largeArc = 0;
+      const sweep = (d >= 0) ? 1 : 0;
+
+      const cx = 80, cy = 80, r = 70;
+      const p0 = polar(cx, cy, r, a1);
+      const p1 = polar(cx, cy, r, end);
+
+      const path = `M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} ${sweep} ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`;
+      turnArcEl.setAttribute("d", path);
+      turnTgtEl.setAttribute("transform", `rotate(${a2} ${cx} ${cy})`);
+      turnSvg.style.opacity = "1";
+    }
+
+    function setHeading(deg){
+      if (!isFinite(deg)) return;
+      targetAngle = normalize(deg);
+    }
+
+    function animateHeading(){
+      const d = shortestDiff(currentAngle, targetAngle);
+      currentAngle = normalize(currentAngle + d * SMOOTHING);
+      bootIcon.style.transform = `translateZ(0) rotate(${currentAngle}deg)`;
+      requestAnimationFrame(animateHeading);
+    }
+
+    /* =========================================================
+       Gauges
+    ========================================================= */
+    function initArc(pathEl){
+      const len = pathEl.getTotalLength();
+      pathEl.style.strokeDasharray = String(len);
+      pathEl.style.strokeDashoffset = String(len);
+      pathEl.dataset.len = String(len);
+    }
+
+    function setArc(pathEl, norm){
+      norm = clamp(norm, -1, 1);
+      const len = parseFloat(pathEl.dataset.len || "1");
+      const mag = Math.abs(norm);
+      pathEl.style.strokeDashoffset = String(len * (1 - mag));
+
+      if (norm < 0) pathEl.classList.add('rev');
+      else pathEl.classList.remove('rev');
+    }
+
+    /* =========================================================
+       Distance
+    ========================================================= */
+    function setDist(which, cm){
+      const valid = isFinite(cm) && cm >= DIST_MIN_CM && cm <= DIST_MAX_CM;
+      const pct = valid ? ((cm - DIST_MIN_CM) / (DIST_MAX_CM - DIST_MIN_CM)) * 100 : 0;
+
+      const row = (which === 1) ? distRow1 : distRow2;
+      const fill = (which === 1) ? distFill1 : distFill2;
+      const val = (which === 1) ? distVal1 : distVal2;
+
+      row.classList.toggle('invalid', !valid);
+      fill.style.width = `${clamp(pct, 0, 100)}%`;
+      val.textContent = valid ? `${cm.toFixed(1)} cm` : `-- cm`;
+    }
+
+    /* =========================================================
+       Battery
+    ========================================================= */
+    function batteryColor(pct){
+      pct = clamp(pct, 0, 100);
+
+      if (pct <= 25){
+        const t = pct / 25;
+        return rgb(
+          lerp(255, 255, t),
+          lerp(0, 220, t),
+          lerp(0, 0, t)
+        );
+      } else {
+        const t = (pct - 25) / 75;
+        return rgb(
+          lerp(255, 0, t),
+          lerp(220, 200, t),
+          lerp(0, 80, t)
+        );
+      }
+    }
+
+    function getBatteryPercent(v){
+      if (!isFinite(v)) return 0;
+
+      const pts = BATTERY_POINTS.slice().sort((a, b) => b.v - a.v);
+
+      if (v >= pts[0].v) return pts[0].p;
+      if (v <= pts[pts.length - 1].v) return pts[pts.length - 1].p;
+
+      for (let i = 0; i < pts.length - 1; i++){
+        const a = pts[i];
+        const b = pts[i + 1];
+
+        if (v <= a.v && v >= b.v){
+          const t = (v - b.v) / (a.v - b.v);
+          return lerp(b.p, a.p, t);
+        }
+      }
+
+      return 0;
+    }
+
+    function setBattery(voltage){
+      batteryVolt = voltage;
+      batteryPct = clamp(getBatteryPercent(voltage), 0, 100);
+
+      batteryFill.style.width = `${batteryPct}%`;
+      batteryFill.style.background = batteryColor(batteryPct);
+
+      if (isFinite(voltage)){
+        batteryVal.textContent = `${Math.round(batteryPct)}% / ${voltage.toFixed(2)}V`;
+      } else {
+        batteryVal.textContent = `--% / --.--V`;
+      }
+    }
+
+    /* =========================================================
+       Mode
+    ========================================================= */
+    function setMode(mode){
+      modeBox.textContent = `MODE: ${modeToText(mode)}`;
+    }
+
+    /* =========================================================
+       Recorder
+    ========================================================= */
+    let rec = new Array(REC_MAX);
+    let recN = 0;
+    let recI = 0;
+    let t0 = performance.now();
+
+    function recPush(deg, valid, offR, offL, d1, d2, battV, battPct, mode){
+      const t = Math.round(performance.now() - t0);
+      rec[recI] = [t, deg, valid ? 1 : 0, offR, offL, d1, d2, battV, battPct, mode];
+      recI = (recI + 1) % REC_MAX;
+      if (recN < REC_MAX) recN++;
+    }
+
+    function recClear(){
+      recN = 0;
+      recI = 0;
+      t0 = performance.now();
+    }
+
+    function recToArray(){
+      const out = [];
+      const start = (recI - recN + REC_MAX) % REC_MAX;
+      for (let k = 0; k < recN; k++){
+        out.push(rec[(start + k) % REC_MAX]);
+      }
+      return out;
+    }
+
+    function dumpCSV(){
+      const rows = recToArray();
+      if (!rows.length){
+        add("no data");
+        return;
+      }
+
+      /* AT/DE Excel: Spaltentrennzeichen = ; , Dezimalzeichen = , */
+      let csv = "sep=;\n";
+      csv += "t_ms;heading_deg;valid;spd_R;spd_L;RLdiff;d1_cm;d2_cm;battery_V;battery_pct;mode\n";
+
+      for (const r of rows){
+        const t      = r[0];                              // integer, kein Dezimal
+        const deg    = r[1];
+        const valid  = r[2];                              // 0 / 1, kein Dezimal
+        const offR   = r[3];                              // integer
+        const offL   = r[4];                              // integer
+        const d1     = r[5];
+        const d2     = r[6];
+        const battV  = r[7];
+        const battPct = r[8];
+        const mode   = r[9];                              // integer
+        const RLdiff = offR - offL;                       // integer
+
+        csv +=
+          `${t};`                           +   // t_ms        – ms, ganzzahlig
+          `${csvNum(deg, 1)};`              +   // heading_deg – 1 Nachkommastelle
+          `${valid};`                       +   // valid        – 0/1
+          `${offR};`                        +   // offR         – ganzzahlig
+          `${offL};`                        +   // offL         – ganzzahlig
+          `${RLdiff};`                      +   // RLdiff       – ganzzahlig
+          `${csvNum(d1, 1)};`               +   // d1_cm        – 1 Nachkommastelle
+          `${csvNum(d2, 1)};`               +   // d2_cm        – 1 Nachkommastelle
+          `${csvNum(battV, 2)};`            +   // battery_V    – 2 Nachkommastellen
+          `${csvNum(battPct, 1)};`          +   // battery_pct  – 1 Nachkommastelle
+          `${mode}\n`;                          // mode         – ganzzahlig
+      }
+
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "trace.csv";
+      link.click();
+
+      URL.revokeObjectURL(url);
+      add(`dumped ${rows.length} rows -> trace.csv`);
+    }
+
+    /* =========================================================
+       WebSocket
+    ========================================================= */
+    function getWsHost(){
+      if (location.hostname === "127.0.0.1" || location.hostname === "localhost"){
+        return ESP_IP;
+      }
+      return location.hostname;
+    }
+
+    function connect(){
+      const host = getWsHost();
+      ws = new WebSocket(`ws://${host}/ws`);
+
+      ws.onopen = () => add("[ws] connected");
+
+      ws.onclose = () => {
+        add("[ws] closed, retry...");
+        setTimeout(connect, 500);
+      };
+
+      ws.onerror = (err) => {
+        console.log("WS error:", err);
+      };
+
+      ws.onmessage = (e) => {
+        msgCount++;
+        const s = String(e.data || "").trim();
+
+        if (s.startsWith("P ")){
+          handleTelemetryLine(s);
+          return;
+        }
+
+        add(s);
+      };
+    }
+
+    function handleTelemetryLine(s){
+      const parts = s.split(/\s+/);
+
+      /* Format: P deg valid offR offL d1 d2 turnHeading battVolt mode */
+      if (parts.length < 10) return;
+
+      const deg         = parseFloat(parts[1]);
+      const valid       = (parts[2] === "1");
+      const offR        = parseInt(parts[3], 10) || 0;
+      const offL        = parseInt(parts[4], 10) || 0;
+      const d1          = parseFloat(parts[5]);
+      const d2          = parseFloat(parts[6]);
+      const turnHeading = parseFloat(parts[7]);
+      const battV       = parseFloat(parts[8]);
+      const mode        = parseInt(parts[9], 10) || 0;
+
+      bootIcon.style.opacity = valid ? "1.0" : "0.3";
+
+      if (valid) setHeading(deg);
+
+      const r = offR / 100.0;
+      const l = offL / 100.0;
+
+      setArc(arcR, r);
+      setArc(arcL, l);
+
+      valR.textContent = `${Math.round(r * 100)}%`;
+      valL.textContent = `${Math.round(l * 100)}%`;
+
+      setDist(1, d1);
+      setDist(2, d2);
+      setBattery(battV);   // setzt globales batteryPct
+      setMode(mode);
+
+      if (isFinite(turnHeading) && turnHeading >= 0){
+        bootText.textContent = `target ${turnHeading.toFixed(1)}°`;
+        setTurnArc(deg, turnHeading);
+      } else {
+        bootText.textContent = ``;
+        setTurnArc(NaN, -1);
+      }
+
+      /* batteryPct hier lesen – setBattery() hat es bereits aktualisiert */
+      recPush(deg, valid, offR, offL, d1, d2, battV, batteryPct, mode);
+    }
+
+    function statTick(){
+      const now = performance.now();
+      if (now - lastStat >= 1000){
+        console.log("WS msgs/s:", msgCount);
+        msgCount = 0;
+        lastStat = now;
+      }
+      requestAnimationFrame(statTick);
+    }
+
+    /* =========================================================
+       Commands
+    ========================================================= */
+    function sendLine(s){
+      if (!s) return;
+
+      if (s === "dump"){
+        dumpCSV();
+        cmdEl.value = "";
+        cmdEl.focus();
+        return;
+      }
+
+      if (s === "clear"){
+        recClear();
+        add("recording cleared");
+        cmdEl.value = "";
+        cmdEl.focus();
+        return;
+      }
+
+      if (!ws || ws.readyState !== 1) return;
+
+      ws.send(s);
+      lastCmd = s;
+      cmdEl.value = "";
+      cmdEl.focus();
+    }
+
+    function setupInputHandlers(){
+      sendBtn.onclick = () => {
+        const s = cmdEl.value.trim();
+        if (s) sendLine(s);
+      };
+
+      dumpBtn.onclick = () => {
+        dumpCSV();
+        cmdEl.value = "";
+        cmdEl.focus();
+      };
+
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && (e.key === 'd' || e.key === 'D')){
+          e.preventDefault();
+          dumpCSV();
+        }
+      });
+
+      cmdEl.addEventListener('keydown', (e) => {
+        if (e.key === "Enter"){
+          const s = cmdEl.value.trim();
+          if (s) sendLine(s);
+        } else if (e.key === "ArrowUp"){
+          e.preventDefault();
+          if (lastCmd){
+            cmdEl.value = lastCmd;
+            cmdEl.setSelectionRange(cmdEl.value.length, cmdEl.value.length);
+          }
+        } else if (e.key === "Escape"){
+          e.preventDefault();
+          cmdEl.value = "";
+        }
+      });
+    }
+
+    /* =========================================================
+       Init
+    ========================================================= */
+    function init(){
+      initArc(arcR);
+      initArc(arcL);
+
+      setDist(1, NaN);
+      setDist(2, NaN);
+      setMode(0);
+      setBattery(NaN);
+
+      setupInputHandlers();
+      animateHeading();
+      statTick();
+      connect();
+    }
+
+    init();
+  </script>
+</body>
+</html>
