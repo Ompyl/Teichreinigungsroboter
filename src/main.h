@@ -1,100 +1,109 @@
 #pragma once
 
 #include <Arduino.h>
-#include <stdarg.h>
-#include <Wire.h>
-#include "ESP32Wiimote.h"
-#include <math.h>
-#include <ESP32Servo.h>
-#include <WiFi.h>
 #include <ArduinoOTA.h>
 #include <AsyncTCP.h>
+#include <ESP32Servo.h>
+#include <ESP32Wiimote.h>
 #include <ESPAsyncWebServer.h>
+#include <WiFi.h>
+#include <Wire.h>
+#include <math.h>
+#include <stdarg.h>
 
-// ======================== Defines ========================
-#define BAT_PIN 33
-#define WATER_PIN 32
-#define R_NTC_PIN 25
-#define L_NTC_PIN 26
-#define TRIG1_PIN 13
-#define ECHO1_PIN 18
-#define TRIG2_PIN 12
-#define ECHO2_PIN 17
-#define BUZZER_PIN 23
+// Pins
+constexpr uint8_t BAT_PIN = 33;
+constexpr uint8_t WATER_PIN = 32;
+constexpr uint8_t R_NTC_PIN = 25;
+constexpr uint8_t L_NTC_PIN = 26;
+constexpr uint8_t TRIG1_PIN = 13;
+constexpr uint8_t ECHO1_PIN = 18;
+constexpr uint8_t TRIG2_PIN = 12;
+constexpr uint8_t ECHO2_PIN = 17;
+constexpr uint8_t BUZZER_PIN = 23;
 
-#define PING_GAP_MS 70
-#define ECHO_TIMEOUT_US 30000
-#define MIN_CM 25.0f
-#define MAX_CM 200.0f
-#define DIST_FILTER_ALPHA 0.15f
-#define DIST_INVALID_HOLD_COUNT 2
+// Distance measurement
+constexpr uint32_t PING_GAP_MS = 70;
+constexpr uint32_t ECHO_TIMEOUT_US = 30000;
+constexpr float MIN_CM = 25.0f;
+constexpr float MAX_CM = 200.0f;
+constexpr float DIST_FILTER_ALPHA = 0.15f;
+constexpr uint8_t DIST_INVALID_HOLD_COUNT = 2;
 
-#define WII_TIMEOUT_MS 300
-#define NKC_THRESHOLD 5
-#define NO_NKC_V 0.25f
+// Wii / input
+constexpr uint32_t WII_TIMEOUT_MS = 300;
+constexpr int NKC_THRESHOLD = 5;
+constexpr float NO_NKC_V = 0.25f;
 
-#define ESC_BASE_US 1500
-#define ESC_MAX_US 300
-#define ESC_PIN_R 19
-#define ESC_PIN_L 16
+// ESC
+constexpr int ESC_BASE_US = 1500;
+constexpr int ESC_MAX_US = 300;
+constexpr uint8_t ESC_PIN_R = 19;
+constexpr uint8_t ESC_PIN_L = 16;
 
-#define R_REF 10000.0f    // reference resistor (10k)
-#define R_NOM 10000.0f    // NTC nominal resistance at 25°C
-#define T_NOM 25.0f       // nominal temperature (°C)
-#define B_VAL 3950.0f     // B value of NTC
-#define ADC_MAX 4095.0f   // 12-bit ADC
+// NTC
+constexpr float R_REF = 10000.0f;
+constexpr float R_NOM = 10000.0f;
+constexpr float T_NOM = 25.0f;
+constexpr float B_VAL = 3950.0f;
+constexpr float ADC_MAX = 4095.0f;
 
-#define MEAS_MS 1200
-#define SEND_INTERVAL_MS 100
-#define PRINT_INTERVAL_MS 500
+// Timing
+constexpr uint32_t MEAS_MS = 1200;
+constexpr uint32_t SEND_INTERVAL_MS = 100;
+constexpr uint32_t PRINT_INTERVAL_MS = 500;
 
-#define TURN_DIR_INVERT false
-#define TURN_TOL_DEG 10.0f
-#define TURN_TIMEOUT_MS 8000
+// Turn control
+constexpr bool TURN_DIR_INVERT = false;
+constexpr float TURN_TOL_DEG = 10.0f;
+constexpr uint32_t TURN_TIMEOUT_MS = 8000;
 
-#define LINEAR_KP 10.0f
-#define LINEAR_MAX_CORR_PERCENT 40
-#define LINEAR_TOL_DEG 3.0f
-#define LINEAR_LOOP_DELAY_MS 20
+// Linear control
+constexpr float LINEAR_KP = 10.0f;
+constexpr int LINEAR_MAX_CORR_PERCENT = 40;
+constexpr float LINEAR_TOL_DEG = 3.0f;
+constexpr uint32_t LINEAR_LOOP_DELAY_MS = 20;
 
-#define BTN_TURN_SPEED_PERCENT 20
-#define BTN_TURN_BIAS_PERCENT 0
-#define BTN_LINEAR_SPEED_PERCENT 20
-#define BTN_LINEAR_DURATION_MS 10000
+// Button actions
+constexpr int BTN_TURN_SPEED_PERCENT = 20;
+constexpr int BTN_TURN_BIAS_PERCENT = 0;
+constexpr int BTN_LINEAR_SPEED_PERCENT = 20;
+constexpr uint32_t BTN_LINEAR_DURATION_MS = 10000;
 
+// Navigation
+constexpr float NAV_AVOID_TURN_ANGLE_DEG = 150.0f;
+constexpr bool NAV_AVOID_DEFAULT_TURN_RIGHT = true;
+constexpr bool NAV_AVOID_DIST1_IS_RIGHT = true;
 
-#define NAV_AVOID_TURN_ANGLE_DEG      150.0f
-#define NAV_AVOID_DEFAULT_TURN_RIGHT  true
-#define NAV_AVOID_DIST1_IS_RIGHT      true
+constexpr int NAV_DEFAULT_SPEED_PERCENT = 15;
+constexpr float NAV_DEFAULT_TRIGGER_CM = 35.0f;
+constexpr int NAV_DEFAULT_ROUNDS = 4;
+constexpr uint32_t NAV_LINEAR_TIMEOUT_MS = 12000;
+constexpr bool NAV_FIRST_TURN_RIGHT = true;
+constexpr float NAV_TURN_ANGLE_DEG = 180.0f;
+constexpr int NAV_TURN_SPEED_PERCENT = 20;
+constexpr int NAV_TURN_BIAS_PERCENT = 0;
+constexpr uint32_t NAV_LOOP_DELAY_MS = 20;
 
-#define NAV_DEFAULT_SPEED_PERCENT 15
-#define NAV_DEFAULT_TRIGGER_CM 35.0f
-#define NAV_DEFAULT_ROUNDS 4
-#define NAV_LINEAR_TIMEOUT_MS 12000
-#define NAV_FIRST_TURN_RIGHT true
-#define NAV_TURN_ANGLE_DEG 180.0f
-#define NAV_TURN_SPEED_PERCENT 20
-#define NAV_TURN_BIAS_PERCENT 0
-#define NAV_LOOP_DELAY_MS 20
+// Compass
+constexpr uint8_t HMC5883L_ADDRESS = 0x1E;
+constexpr uint8_t COMP_FREQ = 20;
+constexpr uint8_t COMP_SDA = 21;
+constexpr uint8_t COMP_SCL = 22;
 
-#define HMC5883L_ADDRESS 0x1E
-#define COMP_FREQ 20
-#define COMP_SDA 21
-#define COMP_SCL 22
-
+// Logging
 constexpr size_t LOG_LINE_MAX = 192;
 
 extern const uint8_t index_html_start[] asm("_binary_src_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_src_index_html_end");
 
-// ======================== Types ==========================
-typedef struct
+struct WiiData
 {
   ButtonState btn;
   float nkcx;
   float nkcy;
   bool active;
-} WiiData;
+};
 
 enum CommandType : uint8_t
 {
@@ -144,22 +153,23 @@ struct MotionCommand
   int rounds = 0;
 };
 
-typedef struct
+struct ThrottleData
 {
   int rightPercent;
   int leftPercent;
   bool running;
   uint8_t mode;
-} ThrottleData;
+};
 
-typedef struct
+struct CompassData
 {
   float angle_deg;
-  int16_t x, y, z;
+  int16_t x;
+  int16_t y;
+  int16_t z;
   bool valid;
-} CompassData;
+};
 
-// ======================== Shared Queues ========================
 extern QueueHandle_t logQueue;
 extern QueueHandle_t wiiQueue;
 extern QueueHandle_t throttleQueue;
